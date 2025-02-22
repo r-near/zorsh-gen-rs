@@ -12,6 +12,7 @@ impl ZorshGenerator {
     pub fn new(structs: HashMap<String, StructInfo>, enums: HashMap<String, EnumInfo>) -> Self {
         Self { structs, enums }
     }
+
     pub fn generate_module(
         &self,
         current_module: &str,
@@ -45,30 +46,21 @@ impl ZorshGenerator {
             let type_module = self.get_type_module(type_path);
             if type_module == current_module {
                 if let Some(struct_info) = self.structs.get(type_path) {
+                    // Generate struct schema and type definition
                     output.push_str(&self.generate_struct(struct_info));
-                    output.push_str("\n\n");
+                    output.push_str(&format!(
+                        "\nexport type {} = b.infer<typeof {}Schema>;\n\n",
+                        struct_info.name, struct_info.name
+                    ));
                 } else if let Some(enum_info) = self.enums.get(type_path) {
+                    // Generate enum schema and type definition
                     output.push_str(&self.generate_enum(enum_info));
-                    output.push_str("\n\n");
+                    output.push_str(&format!(
+                        "\nexport type {} = b.infer<typeof {}Schema>;\n\n",
+                        enum_info.name, enum_info.name
+                    ));
                 }
             }
-        }
-
-        // Add exports
-        let exports: Vec<_> = dependencies
-            .ordered_types
-            .iter()
-            .filter(|type_path| self.get_type_module(type_path) == current_module)
-            .map(|type_path| {
-                let name = type_path.split("::").last().unwrap();
-                format!("    {}Schema", name)
-            })
-            .collect();
-
-        if !exports.is_empty() {
-            output.push_str("export {\n");
-            output.push_str(&exports.join(",\n"));
-            output.push_str("\n};\n");
         }
 
         Ok(output)
