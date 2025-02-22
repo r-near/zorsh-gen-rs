@@ -5,12 +5,12 @@ snapshot_kind: text
 ---
 import { b } from '@zorsh/zorsh';
 
-export const EmptySchema = b.struct({
-
-});
-export type Empty = b.infer<typeof EmptySchema>;
-
 export const EmptyBracesSchema = b.struct({
 
 });
 export type EmptyBraces = b.infer<typeof EmptyBracesSchema>;
+
+export const EmptySchema = b.struct({
+
+});
+export type Empty = b.infer<typeof EmptySchema>;
