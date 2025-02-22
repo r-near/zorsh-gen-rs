@@ -193,11 +193,13 @@ let config = Config {
 
 ## Contributing
 
-Contributions are welcome! Feel free to:
+Contributions are welcome! Before you start:
 
-- Report bugs
-- Suggest features
-- Submit pull requests
+- Check out our [Technical Documentation](docs/technical.md) for a deep dive into the codebase
+- Feel free to:
+  - Report bugs
+  - Suggest features
+  - Submit pull requests
 
 
 ## Related Projects
