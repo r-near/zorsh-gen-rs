@@ -65,7 +65,7 @@ impl ZorshGen {
 
     /// Process a single Rust file and return the generated Zorsh code as a string
     pub fn convert_str(&self, rust_code: &str) -> Result<String> {
-        let mut parser = TypeParser::new("root".to_string(), self.config.only_annotated.clone());
+        let mut parser = TypeParser::new("root".to_string(), self.config.only_annotated);
         parser.parse_file(rust_code)?;
 
         let resolver = DependencyResolver::new(parser.structs.clone(), parser.enums.clone());

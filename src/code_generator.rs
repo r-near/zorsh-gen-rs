@@ -132,6 +132,7 @@ impl ZorshGenerator {
         )
     }
 
+    #[allow(clippy::only_used_in_recursion)] // Parameter is essential for recursive calls
     fn type_to_zorsh(&self, type_kind: &TypeKind) -> String {
         match type_kind {
             TypeKind::Primitive(name) => format!("b.{}()", name),

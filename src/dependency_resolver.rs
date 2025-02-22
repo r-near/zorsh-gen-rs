@@ -115,6 +115,7 @@ impl DependencyResolver {
         None
     }
 
+    #[allow(clippy::only_used_in_recursion)] // Parameter is essential for recursive calls
     fn collect_type_dependencies(&self, type_kind: &TypeKind, deps: &mut HashSet<String>) {
         match type_kind {
             TypeKind::Struct(_, path) | TypeKind::Enum(_, path) => {
