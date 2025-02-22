@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.2] - 2025-02-22
+
+### ⚙️ Miscellaneous Tasks
+
+- Update CI
+
 ## [0.1.1] - 2025-02-22
 
 ### ⚙️ Miscellaneous Tasks
@@ -10,6 +16,7 @@ All notable changes to this project will be documented in this file.
 - Update release config
 - Release zorsh-gen-rs version 0.1.1
 - Update changelog
+- Release zorsh-gen-rs version 0.1.1
 
 ## [0.1.0] - 2025-02-22
 
