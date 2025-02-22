@@ -1,6 +1,6 @@
 [package]
 name = "zorsh-gen-rs"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 repository = "https://github.com/r-near/zorsh-gen-rs"
 license = "MIT"
