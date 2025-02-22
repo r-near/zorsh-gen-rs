@@ -8,12 +8,6 @@ authors = ["r-near <r-near@zorsh.dev>"]
 homepage = "https://zorsh.dev"
 description = "Zorsh generator for Rust"
 
-[package.metadata.wix]
-upgrade-guid = "E1C4D2B9-E8D8-41D9-9767-7DD5E1B3B22D"
-path-guid = "7EABEFB4-6CBE-4839-8CC3-58877CE2CC56"
-license = false
-eula = false
-
 [[test]]
 name = "integration"
 path = "tests/integration_tests/mod.rs"
