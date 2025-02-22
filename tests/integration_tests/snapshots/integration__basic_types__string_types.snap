@@ -1,0 +1,15 @@
+---
+source: tests/integration_tests/basic_types.rs
+expression: output
+snapshot_kind: text
+---
+import { b } from '@zorsh/zorsh';
+
+export const UserSchema = b.struct({
+    name: b.string(),
+    email: b.string()
+});
+
+export {
+    UserSchema
+};

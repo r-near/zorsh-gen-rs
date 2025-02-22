@@ -3,6 +3,10 @@ name = "zorsh-gen-rs"
 version = "0.1.0"
 edition = "2021"
 
+[[test]]
+name = "integration"
+path = "tests/integration_tests/mod.rs"
+
 [dependencies]
 anyhow = "1.0.96"
 clap = { version = "4.5.30", features = ["derive"] }
@@ -15,5 +19,10 @@ syn = { version = "2.0.98", features = ["full", "visit"] }
 walkdir = "2.5.0"
 
 [dev-dependencies]
+insta = { version = "1.42.1", features = ["yaml"] }
 pretty_assertions = "1.4.1"
 tempfile = "3.17.1"
+
+[profile.dev.package]
+insta.opt-level = 3
+similar.opt-level = 3

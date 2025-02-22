@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -39,27 +39,39 @@ impl ZorshConverter {
             all_enums.extend(parser.enums);
         }
 
-        // Resolve dependencies and group by module
+        // Resolve dependencies
         let resolver = DependencyResolver::new(all_structs.clone(), all_enums.clone());
-        let module_types = resolver.resolve()?;
+        let dependencies = resolver.resolve()?;
 
-        // Generate Zorsh code for each module
+        // Get unique set of modules
+        let mut modules = HashSet::new();
+        for type_path in &dependencies.ordered_types {
+            if let Some(struct_info) = all_structs.get(type_path) {
+                modules.insert(struct_info.module_path.clone());
+            } else if let Some(enum_info) = all_enums.get(type_path) {
+                modules.insert(enum_info.module_path.clone());
+            }
+        }
+
+        // Generate code for each module
         let generator = ZorshGenerator::new(all_structs, all_enums);
 
-        for module in module_types {
-            // Create module directory path
-            let module_dir = self.output_dir.join(module.module_path.replace("::", "/"));
-            fs::create_dir_all(&module_dir)
-                .with_context(|| format!("Failed to create directory: {}", module_dir.display()))?;
+        for module in modules {
+            let module_path = module.replace("::", "/").to_lowercase();
+            let file_path = self.output_dir.join(format!("{}.ts", module_path));
+
+            // Create parent directories if they don't exist
+            if let Some(parent) = file_path.parent() {
+                fs::create_dir_all(parent)
+                    .with_context(|| format!("Failed to create directory: {}", parent.display()))?;
+            }
 
             // Generate and write code
-            let code = generator.generate_module(&module)?;
-            fs::write(module_dir.join("index.ts"), code).with_context(|| {
-                format!(
-                    "Failed to write file: {}",
-                    module_dir.join("index.ts").display()
-                )
-            })?;
+            let code = generator.generate_module(&module, &dependencies)?;
+            fs::write(&file_path, code)
+                .with_context(|| format!("Failed to write file: {}", file_path.display()))?;
+
+            println!("Generated: {}", file_path.display());
         }
 
         Ok(())

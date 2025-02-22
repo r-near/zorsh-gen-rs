@@ -1,0 +1,23 @@
+---
+source: tests/integration_tests/basic_types.rs
+expression: output
+snapshot_kind: text
+---
+import { b } from '@zorsh/zorsh';
+
+export const NumbersSchema = b.struct({
+    u8_val: b.u8(),
+    u16_val: b.u16(),
+    u32_val: b.u32(),
+    u64_val: b.u64(),
+    i8_val: b.i8(),
+    i16_val: b.i16(),
+    i32_val: b.i32(),
+    i64_val: b.i64(),
+    f32_val: b.f32(),
+    f64_val: b.f64()
+});
+
+export {
+    NumbersSchema
+};

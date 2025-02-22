@@ -1,19 +1,21 @@
 use super::type_parser::{EnumInfo, StructInfo, TypeKind};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
+use petgraph::algo::toposort;
 use petgraph::prelude::*;
-use petgraph::{algo::toposort, Graph};
 use std::collections::{HashMap, HashSet};
+
+/// Represents all type dependencies across modules
+#[derive(Debug)]
+pub struct TypeDependencies {
+    /// List of all types in dependency order
+    pub ordered_types: Vec<String>,
+    /// Map of module path -> set of types that need to be imported from it
+    pub module_imports: HashMap<String, HashSet<String>>,
+}
 
 pub struct DependencyResolver {
     structs: HashMap<String, StructInfo>,
     enums: HashMap<String, EnumInfo>,
-}
-
-#[derive(Debug)]
-pub struct ModuleTypes {
-    pub module_path: String,
-    pub type_paths: Vec<String>,
-    pub dependencies: HashSet<String>, // Other modules this one depends on
 }
 
 impl DependencyResolver {
@@ -21,136 +23,85 @@ impl DependencyResolver {
         Self { structs, enums }
     }
 
-    pub fn resolve(&self) -> Result<Vec<ModuleTypes>> {
+    pub fn resolve(&self) -> Result<TypeDependencies> {
+        // Build dependency graph
         let mut graph = Graph::<String, ()>::new();
         let mut node_indices = HashMap::new();
 
         // Create nodes for all types
-        for (path, _) in &self.structs {
-            let idx = graph.add_node(path.clone());
-            node_indices.insert(path.clone(), idx);
-        }
-        for (path, _) in &self.enums {
+        for path in self.structs.keys().chain(self.enums.keys()) {
             let idx = graph.add_node(path.clone());
             node_indices.insert(path.clone(), idx);
         }
 
-        // Add edges for dependencies
-        self.add_struct_dependencies(&mut graph, &node_indices);
-        self.add_enum_dependencies(&mut graph, &node_indices);
-
-        // Perform topological sort with proper error handling
-        let sorted = toposort(&graph, None)
-            .map_err(|e| anyhow::anyhow!("Dependency cycle detected: {:?}", e))?;
-
-        // Group by module and collect dependencies
-        let mut module_groups: HashMap<String, ModuleTypes> = HashMap::new();
-
-        for idx in sorted {
-            let type_path = graph[idx].clone();
-            let (module_path, dependencies) =
-                if let Some(struct_info) = self.structs.get(&type_path) {
-                    (
-                        struct_info.module_path.clone(),
-                        self.get_struct_dependencies(&type_path),
-                    )
-                } else if let Some(enum_info) = self.enums.get(&type_path) {
-                    (
-                        enum_info.module_path.clone(),
-                        self.get_enum_dependencies(&type_path),
-                    )
-                } else {
-                    continue;
-                };
-
-            module_groups
-                .entry(module_path.clone())
-                .or_insert_with(|| ModuleTypes {
-                    module_path: module_path.clone(),
-                    type_paths: Vec::new(),
-                    dependencies: HashSet::new(),
-                })
-                .type_paths
-                .push(type_path);
-
-            // Add dependencies
-            if let Some(module_types) = module_groups.get_mut(&module_path) {
-                module_types.dependencies.extend(dependencies);
-            }
-        }
-
-        Ok(module_groups.into_values().collect())
-    }
-
-    fn add_struct_dependencies(
-        &self,
-        graph: &mut Graph<String, ()>,
-        node_indices: &HashMap<String, NodeIndex>,
-    ) {
-        for (path, struct_info) in &self.structs {
-            let from_idx = node_indices[path];
-
-            for field in &struct_info.fields {
-                self.add_type_dependencies(&field.type_kind, from_idx, graph, node_indices);
-            }
-        }
-    }
-
-    fn add_enum_dependencies(
-        &self,
-        graph: &mut Graph<String, ()>,
-        node_indices: &HashMap<String, NodeIndex>,
-    ) {
-        for (path, enum_info) in &self.enums {
-            let from_idx = node_indices[path];
-
-            for variant in &enum_info.variants {
-                if let Some(fields) = &variant.fields {
-                    for field in fields {
-                        self.add_type_dependencies(&field.type_kind, from_idx, graph, node_indices);
+        // Add edges for all dependencies
+        for (path, idx) in &node_indices {
+            if let Some(deps) = self.get_type_dependencies(path) {
+                for dep_path in deps {
+                    if let Some(&dep_idx) = node_indices.get(&dep_path) {
+                        // Add edge from dependency to dependent (reverse for topo sort)
+                        graph.add_edge(dep_idx, *idx, ());
                     }
                 }
             }
         }
-    }
 
-    fn add_type_dependencies(
-        &self,
-        type_kind: &TypeKind,
-        from_idx: NodeIndex,
-        graph: &mut Graph<String, ()>,
-        node_indices: &HashMap<String, NodeIndex>,
-    ) {
-        match type_kind {
-            TypeKind::Struct(_, path) | TypeKind::Enum(_, path) => {
-                if let Some(&to_idx) = node_indices.get(path) {
-                    graph.add_edge(from_idx, to_idx, ());
+        // Perform topological sort
+        let sorted =
+            toposort(&graph, None).map_err(|e| anyhow!("Dependency cycle detected: {:?}", e))?;
+
+        // Convert node indices back to type paths in order
+        let ordered_types = sorted
+            .iter()
+            .map(|&idx| graph[idx].clone())
+            .collect::<Vec<_>>();
+
+        // Collect required imports between modules
+        let mut module_imports: HashMap<String, HashSet<String>> = HashMap::new();
+
+        for type_path in &ordered_types {
+            let current_module = self.get_module_path(type_path);
+
+            // Get external dependencies for this type
+            if let Some(deps) = self.get_type_dependencies(type_path) {
+                for dep_path in deps {
+                    let dep_module = self.get_module_path(&dep_path);
+
+                    // Only add import if it's from a different module
+                    if dep_module != current_module {
+                        let type_name = dep_path
+                            .split("::")
+                            .last()
+                            .ok_or_else(|| anyhow!("Invalid type path: {}", dep_path))?;
+
+                        module_imports
+                            .entry(dep_module)
+                            .or_default()
+                            .insert(type_name.to_string());
+                    }
                 }
             }
-            TypeKind::Vec(inner) | TypeKind::Option(inner) | TypeKind::Array(inner, _) => {
-                self.add_type_dependencies(inner, from_idx, graph, node_indices);
-            }
-            TypeKind::HashMap(key, value) => {
-                self.add_type_dependencies(key, from_idx, graph, node_indices);
-                self.add_type_dependencies(value, from_idx, graph, node_indices);
-            }
-            _ => {}
         }
+
+        Ok(TypeDependencies {
+            ordered_types,
+            module_imports,
+        })
     }
 
-    fn get_struct_dependencies(&self, path: &str) -> HashSet<String> {
+    fn get_type_dependencies(&self, type_path: &str) -> Option<HashSet<String>> {
         let mut deps = HashSet::new();
-        if let Some(struct_info) = self.structs.get(path) {
+
+        // Check structs
+        if let Some(struct_info) = self.structs.get(type_path) {
             for field in &struct_info.fields {
                 self.collect_type_dependencies(&field.type_kind, &mut deps);
             }
+            return Some(deps);
         }
-        deps
-    }
 
-    fn get_enum_dependencies(&self, path: &str) -> HashSet<String> {
-        let mut deps = HashSet::new();
-        if let Some(enum_info) = self.enums.get(path) {
+        // Check enums
+        if let Some(enum_info) = self.enums.get(type_path) {
             for variant in &enum_info.variants {
                 if let Some(fields) = &variant.fields {
                     for field in fields {
@@ -158,18 +109,16 @@ impl DependencyResolver {
                     }
                 }
             }
+            return Some(deps);
         }
-        deps
+
+        None
     }
 
     fn collect_type_dependencies(&self, type_kind: &TypeKind, deps: &mut HashSet<String>) {
         match type_kind {
             TypeKind::Struct(_, path) | TypeKind::Enum(_, path) => {
-                if let Some(struct_info) = self.structs.get(path) {
-                    deps.insert(struct_info.module_path.clone());
-                } else if let Some(enum_info) = self.enums.get(path) {
-                    deps.insert(enum_info.module_path.clone());
-                }
+                deps.insert(path.clone());
             }
             TypeKind::Vec(inner) | TypeKind::Option(inner) | TypeKind::Array(inner, _) => {
                 self.collect_type_dependencies(inner, deps);
@@ -179,6 +128,21 @@ impl DependencyResolver {
                 self.collect_type_dependencies(value, deps);
             }
             _ => {}
+        }
+    }
+
+    fn get_module_path(&self, type_path: &str) -> String {
+        // Get module path from either structs or enums
+        if let Some(struct_info) = self.structs.get(type_path) {
+            struct_info.module_path.clone()
+        } else if let Some(enum_info) = self.enums.get(type_path) {
+            enum_info.module_path.clone()
+        } else {
+            // If type not found, assume module path is everything before the last segment
+            type_path
+                .rsplit_once("::")
+                .map(|(m, _)| m.to_string())
+                .unwrap_or_else(|| type_path.to_string())
         }
     }
 }

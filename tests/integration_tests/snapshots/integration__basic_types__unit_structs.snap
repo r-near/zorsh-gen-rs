@@ -1,0 +1,19 @@
+---
+source: tests/integration_tests/basic_types.rs
+expression: output
+snapshot_kind: text
+---
+import { b } from '@zorsh/zorsh';
+
+export const EmptySchema = b.struct({
+
+});
+
+export const EmptyBracesSchema = b.struct({
+
+});
+
+export {
+    EmptySchema,
+    EmptyBracesSchema
+};

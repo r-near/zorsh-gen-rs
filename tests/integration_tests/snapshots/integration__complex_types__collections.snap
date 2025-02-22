@@ -1,0 +1,22 @@
+---
+source: tests/integration_tests/complex_types.rs
+expression: output
+snapshot_kind: text
+---
+import { b } from '@zorsh/zorsh';
+
+export const ItemSchema = b.struct({
+    id: b.u32(),
+    name: b.string()
+});
+
+export const InventorySchema = b.struct({
+    items: b.vec(ItemSchema),
+    counts: b.hashMap(b.string(), b.u32()),
+    fixed_data: b.array(b.u8(), 32)
+});
+
+export {
+    ItemSchema,
+    InventorySchema
+};

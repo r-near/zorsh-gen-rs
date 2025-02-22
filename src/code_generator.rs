@@ -1,5 +1,5 @@
-use super::dependency_resolver::ModuleTypes;
-use super::type_parser::{EnumInfo, EnumVariant, FieldInfo, StructInfo, TypeKind};
+use super::dependency_resolver::TypeDependencies;
+use super::type_parser::{EnumInfo, StructInfo, TypeKind};
 use anyhow::Result;
 use std::collections::HashMap;
 
@@ -12,60 +12,92 @@ impl ZorshGenerator {
     pub fn new(structs: HashMap<String, StructInfo>, enums: HashMap<String, EnumInfo>) -> Self {
         Self { structs, enums }
     }
-
-    pub fn generate_module(&self, module_types: &ModuleTypes) -> Result<String> {
+    pub fn generate_module(
+        &self,
+        current_module: &str,
+        dependencies: &TypeDependencies,
+    ) -> Result<String> {
         let mut output = String::new();
 
-        // Add imports
+        // Add base import
         output.push_str("import { b } from '@zorsh/zorsh';\n");
 
         // Add imports from other modules
-        for dep in &module_types.dependencies {
-            if dep != &module_types.module_path {
+        for (module_path, type_names) in &dependencies.module_imports {
+            if module_path != current_module {
+                let schema_names: Vec<_> = type_names
+                    .iter()
+                    .map(|name| format!("{}Schema", name))
+                    .collect();
+
                 output.push_str(&format!(
                     "import {{ {} }} from './{}';\n",
-                    self.get_module_exports(dep),
-                    dep.replace("::", "/")
+                    schema_names.join(", "),
+                    module_path.replace("::", "/").to_lowercase()
                 ));
             }
         }
         output.push('\n');
 
         // Generate type definitions in dependency order
-        for type_path in &module_types.type_paths {
-            if let Some(struct_info) = self.structs.get(type_path) {
-                output.push_str(&self.generate_struct(struct_info));
-                output.push_str("\n\n");
-            } else if let Some(enum_info) = self.enums.get(type_path) {
-                output.push_str(&self.generate_enum(enum_info));
-                output.push_str("\n\n");
+        for type_path in &dependencies.ordered_types {
+            // Only generate types that belong to the current module
+            let type_module = self.get_type_module(type_path);
+            if type_module == current_module {
+                if let Some(struct_info) = self.structs.get(type_path) {
+                    output.push_str(&self.generate_struct(struct_info));
+                    output.push_str("\n\n");
+                } else if let Some(enum_info) = self.enums.get(type_path) {
+                    output.push_str(&self.generate_enum(enum_info));
+                    output.push_str("\n\n");
+                }
             }
         }
 
         // Add exports
-        output.push_str("export {\n");
-        for type_path in &module_types.type_paths {
-            if let Some(struct_info) = self.structs.get(type_path) {
-                output.push_str(&format!("    {}Schema,\n", struct_info.name));
-            } else if let Some(enum_info) = self.enums.get(type_path) {
-                output.push_str(&format!("    {}Schema,\n", enum_info.name));
-            }
+        let exports: Vec<_> = dependencies
+            .ordered_types
+            .iter()
+            .filter(|type_path| self.get_type_module(type_path) == current_module)
+            .map(|type_path| {
+                let name = type_path.split("::").last().unwrap();
+                format!("    {}Schema", name)
+            })
+            .collect();
+
+        if !exports.is_empty() {
+            output.push_str("export {\n");
+            output.push_str(&exports.join(",\n"));
+            output.push_str("\n};\n");
         }
-        output.push_str("};\n");
 
         Ok(output)
+    }
+
+    fn get_type_module(&self, type_path: &str) -> String {
+        if let Some(struct_info) = self.structs.get(type_path) {
+            struct_info.module_path.to_string()
+        } else if let Some(enum_info) = self.enums.get(type_path) {
+            enum_info.module_path.to_string()
+        } else {
+            // Fallback to everything before the last "::"
+            type_path
+                .rsplit_once("::")
+                .map(|(m, _)| m.to_string())
+                .unwrap_or_else(|| type_path.to_string())
+        }
     }
 
     fn get_module_exports(&self, module_path: &str) -> String {
         let mut exports = Vec::new();
 
-        for (path, struct_info) in &self.structs {
+        for (_path, struct_info) in &self.structs {
             if struct_info.module_path == module_path {
                 exports.push(format!("{}Schema", struct_info.name));
             }
         }
 
-        for (path, enum_info) in &self.enums {
+        for (_path, enum_info) in &self.enums {
             if enum_info.module_path == module_path {
                 exports.push(format!("{}Schema", enum_info.name));
             }

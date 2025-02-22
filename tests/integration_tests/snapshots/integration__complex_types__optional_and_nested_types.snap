@@ -1,0 +1,21 @@
+---
+source: tests/integration_tests/complex_types.rs
+expression: output
+snapshot_kind: text
+---
+import { b } from '@zorsh/zorsh';
+
+export const MetadataSchema = b.struct({
+    tags: b.vec(b.string()),
+    extra: b.option(b.hashMap(b.string(), b.vec(b.u32())))
+});
+
+export const DocumentSchema = b.struct({
+    id: b.string(),
+    metadata: b.option(MetadataSchema)
+});
+
+export {
+    MetadataSchema,
+    DocumentSchema
+};

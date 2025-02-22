@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::collections::HashMap;
 use syn::{
     visit::{self, Visit},
-    Fields, File, GenericArgument, Ident, ItemEnum, ItemStruct, PathArguments, Type, TypePath,
+    Fields, File, GenericArgument, ItemEnum, ItemStruct, PathArguments, Type, TypePath,
 };
 
 #[derive(Debug, Clone)]
@@ -150,6 +150,11 @@ impl TypeParser {
 
 impl<'ast> Visit<'ast> for TypeParser {
     fn visit_item_struct(&mut self, node: &'ast ItemStruct) {
+        // Check if struct has BorshSerialize or BorshDeserialize derive
+        if !has_borsh_derive(&node.attrs) {
+            return;
+        }
+
         let struct_name = node.ident.to_string();
         let full_path = format!("{}::{}", self.module_path, struct_name);
         let mut fields = Vec::new();
@@ -178,6 +183,11 @@ impl<'ast> Visit<'ast> for TypeParser {
     }
 
     fn visit_item_enum(&mut self, node: &'ast ItemEnum) {
+        // Check if enum has BorshSerialize or BorshDeserialize derive
+        if !has_borsh_derive(&node.attrs) {
+            return;
+        }
+
         let enum_name = node.ident.to_string();
         let full_path = format!("{}::{}", self.module_path, enum_name);
         let mut variants = Vec::new();
@@ -225,4 +235,21 @@ impl<'ast> Visit<'ast> for TypeParser {
 
         visit::visit_item_enum(self, node);
     }
+}
+
+// Helper function to check for Borsh derives
+fn has_borsh_derive(attrs: &[syn::Attribute]) -> bool {
+    attrs.iter().any(|attr| {
+        if !attr.path().is_ident("derive") {
+            return false;
+        }
+
+        match attr.meta {
+            syn::Meta::List(ref list) => {
+                list.tokens.to_string().contains("BorshSerialize")
+                    || list.tokens.to_string().contains("BorshDeserialize")
+            }
+            _ => false,
+        }
+    })
 }

@@ -1,0 +1,23 @@
+---
+source: tests/integration_tests/complex_types.rs
+expression: output
+snapshot_kind: text
+---
+import { b } from '@zorsh/zorsh';
+
+export const EventSchema = b.enum({
+    Created: b.struct({
+        timestamp: b.u64()
+    }),
+    Updated: b.string(),
+    Deleted: b.unit()
+});
+
+export const EventLogSchema = b.struct({
+    events: b.vec(EventSchema)
+});
+
+export {
+    EventSchema,
+    EventLogSchema
+};

@@ -1,0 +1,22 @@
+---
+source: tests/integration_tests/complex_types.rs
+expression: output
+snapshot_kind: text
+---
+import { b } from '@zorsh/zorsh';
+
+export const AddressSchema = b.struct({
+    street: b.string(),
+    city: b.string(),
+    country: b.string()
+});
+
+export const UserSchema = b.struct({
+    name: b.string(),
+    address: AddressSchema
+});
+
+export {
+    AddressSchema,
+    UserSchema
+};
