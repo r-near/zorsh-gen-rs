@@ -1,0 +1,39 @@
+name: Rust CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up cache
+        uses: Swatinem/rust-cache@v2
+    
+      - name: Install Rust Toolchain with components
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy 
+
+      - name: Rustfmt
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Check Build
+        run: cargo check
+
+      - name: Build (Debug)
+        run: cargo build
+
+      - name: Run Tests
+        run: cargo nextest run --verbose
