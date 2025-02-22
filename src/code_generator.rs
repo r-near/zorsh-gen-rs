@@ -88,24 +88,6 @@ impl ZorshGenerator {
         }
     }
 
-    fn get_module_exports(&self, module_path: &str) -> String {
-        let mut exports = Vec::new();
-
-        for (_path, struct_info) in &self.structs {
-            if struct_info.module_path == module_path {
-                exports.push(format!("{}Schema", struct_info.name));
-            }
-        }
-
-        for (_path, enum_info) in &self.enums {
-            if enum_info.module_path == module_path {
-                exports.push(format!("{}Schema", enum_info.name));
-            }
-        }
-
-        exports.join(", ")
-    }
-
     fn generate_struct(&self, struct_info: &StructInfo) -> String {
         let mut fields = Vec::new();
 
