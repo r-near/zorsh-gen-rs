@@ -10,13 +10,10 @@ export const AddressSchema = b.struct({
     city: b.string(),
     country: b.string()
 });
+export type Address = b.infer<typeof AddressSchema>;
 
 export const UserSchema = b.struct({
     name: b.string(),
     address: AddressSchema
 });
-
-export {
-    AddressSchema,
-    UserSchema
-};
+export type User = b.infer<typeof UserSchema>;

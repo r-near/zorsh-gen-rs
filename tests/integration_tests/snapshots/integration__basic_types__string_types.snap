@@ -9,7 +9,4 @@ export const UserSchema = b.struct({
     name: b.string(),
     email: b.string()
 });
-
-export {
-    UserSchema
-};
+export type User = b.infer<typeof UserSchema>;

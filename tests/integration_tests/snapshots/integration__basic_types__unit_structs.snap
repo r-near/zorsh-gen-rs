@@ -8,12 +8,9 @@ import { b } from '@zorsh/zorsh';
 export const EmptySchema = b.struct({
 
 });
+export type Empty = b.infer<typeof EmptySchema>;
 
 export const EmptyBracesSchema = b.struct({
 
 });
-
-export {
-    EmptySchema,
-    EmptyBracesSchema
-};
+export type EmptyBraces = b.infer<typeof EmptyBracesSchema>;

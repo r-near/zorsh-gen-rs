@@ -12,12 +12,9 @@ export const EventSchema = b.enum({
     Updated: b.string(),
     Deleted: b.unit()
 });
+export type Event = b.infer<typeof EventSchema>;
 
 export const EventLogSchema = b.struct({
     events: b.vec(EventSchema)
 });
-
-export {
-    EventSchema,
-    EventLogSchema
-};
+export type EventLog = b.infer<typeof EventLogSchema>;

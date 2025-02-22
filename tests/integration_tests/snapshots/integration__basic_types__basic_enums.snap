@@ -10,7 +10,4 @@ export const StatusSchema = b.enum({
     Inactive: b.unit(),
     Pending: b.unit()
 });
-
-export {
-    StatusSchema
-};
+export type Status = b.infer<typeof StatusSchema>;

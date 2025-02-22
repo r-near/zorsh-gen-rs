@@ -9,14 +9,11 @@ export const ItemSchema = b.struct({
     id: b.u32(),
     name: b.string()
 });
+export type Item = b.infer<typeof ItemSchema>;
 
 export const InventorySchema = b.struct({
     items: b.vec(ItemSchema),
     counts: b.hashMap(b.string(), b.u32()),
     fixed_data: b.array(b.u8(), 32)
 });
-
-export {
-    ItemSchema,
-    InventorySchema
-};
+export type Inventory = b.infer<typeof InventorySchema>;
