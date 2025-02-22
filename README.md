@@ -19,11 +19,11 @@ zorsh-gen-rs takes your existing Rust types and automatically generates [Zorsh](
 ## Quick Start
 
 ```bash
-# Install the generator
-cargo install zorsh-gen-rs
+# Using npx (Node.js)
+npx @zorsh/cli ./src/models ./generated
 
-# Run it on your Rust project
-zorsh-gen-rs ./src/models ./generated
+# Or using pnpm
+pnpm dlx @zorsh/cli ./src/models ./generated
 ```
 
 Your Rust types:
@@ -62,15 +62,60 @@ No duplicate definitions. No schema syncing. No extra maintenance. Just:
 
 ## Installation
 
+Choose the installation method that works best for your workflow:
+
+### Node.js / npm (Recommended for TypeScript projects)
+
 ```bash
-# From crates.io
+# Install globally with npm
+npm install -g @zorsh/cli
+
+# Install as a dev dependency in your project
+npm install --save-dev @zorsh/cli
+
+# Or use without installing
+npx @zorsh/cli
+pnpm dlx @zorsh/cli
+```
+
+### Cargo (Recommended for Rust projects)
+
+```bash
+# Install from crates.io
 cargo install zorsh-gen-rs
 
-# From source
+# Or build from source
 git clone https://github.com/r-near/zorsh-gen-rs
 cd zorsh-gen-rs
 cargo install --path .
 ```
+
+### Script Installers
+
+```bash
+# Unix-like systems (Linux, macOS)
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/r-near/zorsh-gen-rs/releases/download/v0.1.3/zorsh-gen-rs-installer.sh | sh
+
+# Windows PowerShell
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/r-near/zorsh-gen-rs/releases/download/v0.1.3/zorsh-gen-rs-installer.ps1 | iex"
+```
+
+### Package Managers
+
+```bash
+# Homebrew (macOS and Linux)
+brew install r-near/tap/zorsh-gen-rs
+```
+
+### Manual Installation
+
+Pre-built binaries are available for the following platforms:
+
+- macOS (Apple Silicon, Intel)
+- Windows (x64)
+- Linux (x64, ARM64)
+
+Download the appropriate binary for your platform from the [releases page](https://github.com/r-near/zorsh-gen-rs/releases).
 
 ## Usage
 
