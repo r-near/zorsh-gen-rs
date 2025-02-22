@@ -23,6 +23,9 @@ jobs:
         with:
           components: rustfmt, clippy 
 
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
+
       - name: Rustfmt
         run: cargo fmt --all -- --check
 
