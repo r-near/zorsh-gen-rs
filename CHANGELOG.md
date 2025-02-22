@@ -8,6 +8,8 @@ All notable changes to this project will be documented in this file.
 
 - Fix homebrew tap
 - Update release config
+- Release zorsh-gen-rs version 0.1.1
+- Update changelog
 
 ## [0.1.0] - 2025-02-22
 
