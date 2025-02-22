@@ -74,6 +74,11 @@ impl SourceLoader {
     }
 
     fn calculate_module_path(root: &Path, file_path: &Path) -> Result<String> {
+        if root == file_path {
+            // The user passed in a file instead of a directory
+            return Ok(file_path.file_stem().unwrap().to_string_lossy().to_string());
+        }
+
         let rel_path = file_path.strip_prefix(root)?;
         let mut module_parts: Vec<String> = rel_path
             .components()

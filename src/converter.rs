@@ -82,8 +82,6 @@ impl ZorshConverter {
             let code = generator.generate_module(&module, &dependencies)?;
             fs::write(&file_path, code)
                 .with_context(|| format!("Failed to write file: {}", file_path.display()))?;
-
-            println!("Generated: {}", file_path.display());
         }
 
         Ok(())

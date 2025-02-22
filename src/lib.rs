@@ -5,6 +5,7 @@ pub mod source_loader;
 pub mod type_parser;
 
 use anyhow::Result;
+use clap::ValueEnum;
 use std::path::Path;
 
 // Re-export main types for easier usage
@@ -25,7 +26,7 @@ pub struct Config {
     pub output_structure: OutputStructure,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, ValueEnum)]
 pub enum OutputStructure {
     /// Maintain the same directory structure as input
     Nested,
