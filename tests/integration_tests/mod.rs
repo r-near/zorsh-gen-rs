@@ -1,5 +1,6 @@
 mod basic_types;
 mod complex_types;
+mod config_tests;
 mod module_structure;
 
 // Shared test utilities

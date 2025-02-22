@@ -7,6 +7,7 @@ use crate::code_generator::ZorshGenerator;
 use crate::dependency_resolver::DependencyResolver;
 use crate::source_loader::SourceLoader;
 use crate::type_parser::TypeParser;
+use crate::OutputStructure;
 
 pub struct ZorshConverter {
     source_loader: SourceLoader,
@@ -17,9 +18,20 @@ pub struct ZorshConverter {
 impl ZorshConverter {
     pub fn new<P: AsRef<Path>>(input_path: P, output_path: P, config: crate::Config) -> Self {
         Self {
-            source_loader: SourceLoader::new(input_path),
+            source_loader: SourceLoader::new(input_path, config.ignored_patterns.clone()),
             output_dir: output_path.as_ref().to_path_buf(),
             config,
+        }
+    }
+
+    fn get_output_path(&self, module_path: &str) -> PathBuf {
+        match self.config.output_structure {
+            OutputStructure::Nested => self
+                .output_dir
+                .join(format!("{}.ts", module_path.replace("::", "/")).to_lowercase()),
+            OutputStructure::Flat => self
+                .output_dir
+                .join(format!("{}.ts", module_path.replace("::", "_")).to_lowercase()),
         }
     }
 
@@ -32,7 +44,8 @@ impl ZorshConverter {
         let mut all_enums = HashMap::new();
 
         for source_file in &source_files {
-            let mut parser = TypeParser::new(source_file.module_path.clone());
+            let mut parser =
+                TypeParser::new(source_file.module_path.clone(), self.config.only_annotated);
             parser.parse_file(&source_file.content)?;
 
             all_structs.extend(parser.structs);
@@ -57,8 +70,7 @@ impl ZorshConverter {
         let generator = ZorshGenerator::new(all_structs, all_enums);
 
         for module in modules {
-            let module_path = module.replace("::", "/").to_lowercase();
-            let file_path = self.output_dir.join(format!("{}.ts", module_path));
+            let file_path = self.get_output_path(&module);
 
             // Create parent directories if they don't exist
             if let Some(parent) = file_path.parent() {

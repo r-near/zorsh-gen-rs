@@ -45,17 +45,23 @@ pub struct EnumVariant {
 
 pub struct TypeParser {
     module_path: String,
+    only_annotated: bool,
     pub structs: HashMap<String, StructInfo>,
     pub enums: HashMap<String, EnumInfo>,
 }
 
 impl TypeParser {
-    pub fn new(module_path: String) -> Self {
+    pub fn new(module_path: String, only_annotated: bool) -> Self {
         Self {
             module_path,
+            only_annotated,
             structs: HashMap::new(),
             enums: HashMap::new(),
         }
+    }
+
+    fn should_process_item(&self, attrs: &[syn::Attribute]) -> bool {
+        !self.only_annotated || has_borsh_derive(attrs)
     }
 
     pub fn parse_file(&mut self, content: &str) -> Result<()> {
@@ -150,8 +156,8 @@ impl TypeParser {
 
 impl<'ast> Visit<'ast> for TypeParser {
     fn visit_item_struct(&mut self, node: &'ast ItemStruct) {
-        // Check if struct has BorshSerialize or BorshDeserialize derive
-        if !has_borsh_derive(&node.attrs) {
+        // Only process if it matches our annotation requirements
+        if !self.should_process_item(&node.attrs) {
             return;
         }
 
@@ -183,8 +189,8 @@ impl<'ast> Visit<'ast> for TypeParser {
     }
 
     fn visit_item_enum(&mut self, node: &'ast ItemEnum) {
-        // Check if enum has BorshSerialize or BorshDeserialize derive
-        if !has_borsh_derive(&node.attrs) {
+        // Only process if it matches our annotation requirements
+        if !self.should_process_item(&node.attrs) {
             return;
         }
 

@@ -11,13 +11,22 @@ pub struct SourceFile {
 
 pub struct SourceLoader {
     root_path: PathBuf,
+    ignored_patterns: Vec<String>,
 }
 
 impl SourceLoader {
-    pub fn new<P: AsRef<Path>>(root_path: P) -> Self {
+    pub fn new<P: AsRef<Path>>(root_path: P, ignored_patterns: Vec<String>) -> Self {
         Self {
             root_path: root_path.as_ref().to_path_buf(),
+            ignored_patterns,
         }
+    }
+
+    fn is_ignored(&self, entry: &walkdir::DirEntry) -> bool {
+        let path = entry.path().to_string_lossy();
+        self.ignored_patterns
+            .iter()
+            .any(|pattern| path.contains(pattern))
     }
 
     pub fn discover_rust_files(&self) -> Result<Vec<SourceFile>> {
@@ -26,7 +35,7 @@ impl SourceLoader {
         for entry in WalkDir::new(&self.root_path)
             .follow_links(true)
             .into_iter()
-            .filter_entry(|e| !Self::is_hidden(e))
+            .filter_entry(|e| !Self::is_hidden(e) && !self.is_ignored(e))
         {
             let entry = entry.context("Failed to read directory entry")?;
             if !Self::is_rust_file(entry.path()) {
