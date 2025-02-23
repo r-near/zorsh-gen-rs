@@ -2,11 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.4] - 2025-02-23
+
+### 🐛 Bug Fixes
+
+- Type Alias Resolution and Module Path Handling (#1)
+
+### 📚 Documentation
+
+- Update README
+- Add more docs
+- Update download URL
+
 ## [0.1.3] - 2025-02-22
 
 ### ⚙️ Miscellaneous Tasks
 
 - Add npm as distribution method
+- Release zorsh-gen-rs version 0.1.3
 
 ## [0.1.2] - 2025-02-22
 
