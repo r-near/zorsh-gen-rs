@@ -70,8 +70,26 @@ impl TypeParser {
 
     pub fn parse_file(&mut self, content: &str) -> Result<()> {
         let syntax: File = syn::parse_str(content)?;
+
+        // First pass: collect all type aliases
+        self.collect_type_aliases(&syntax);
+
+        // Second pass: process structs and enums
         self.visit_file(&syntax);
+
         Ok(())
+    }
+
+    fn collect_type_aliases(&mut self, file: &File) {
+        use syn::Item;
+
+        for item in &file.items {
+            if let Item::Type(type_item) = item {
+                let type_name = type_item.ident.to_string();
+                // Store the original type for later resolution
+                self.type_aliases.insert(type_name, *type_item.ty.clone());
+            }
+        }
     }
 
     fn parse_type(&self, ty: &Type) -> TypeKind {
@@ -194,17 +212,6 @@ impl TypeParser {
 }
 
 impl<'ast> Visit<'ast> for TypeParser {
-    fn visit_item(&mut self, item: &'ast syn::Item) {
-        match item {
-            syn::Item::Type(type_item) => {
-                let type_name = type_item.ident.to_string();
-                // Store the original type for later resolution
-                self.type_aliases.insert(type_name, *type_item.ty.clone());
-            }
-            _ => visit::visit_item(self, item),
-        }
-    }
-
     fn visit_item_struct(&mut self, node: &'ast ItemStruct) {
         // Only process if it matches our annotation requirements
         if !self.should_process_item(&node.attrs) {
