@@ -1,4 +1,6 @@
 use anyhow::Result;
+use log::debug;
+use quote::ToTokens;
 use std::collections::HashMap;
 use syn::{
     visit::{self, Visit},
@@ -48,6 +50,7 @@ pub struct TypeParser {
     only_annotated: bool,
     pub structs: HashMap<String, StructInfo>,
     pub enums: HashMap<String, EnumInfo>,
+    type_aliases: HashMap<String, Type>,
 }
 
 impl TypeParser {
@@ -57,6 +60,7 @@ impl TypeParser {
             only_annotated,
             structs: HashMap::new(),
             enums: HashMap::new(),
+            type_aliases: HashMap::new(),
         }
     }
 
@@ -66,15 +70,47 @@ impl TypeParser {
 
     pub fn parse_file(&mut self, content: &str) -> Result<()> {
         let syntax: File = syn::parse_str(content)?;
+
+        // First pass: collect all type aliases
+        self.collect_type_aliases(&syntax);
+
+        // Second pass: process structs and enums
         self.visit_file(&syntax);
+
         Ok(())
     }
 
+    fn collect_type_aliases(&mut self, file: &File) {
+        use syn::Item;
+
+        for item in &file.items {
+            if let Item::Type(type_item) = item {
+                let type_name = type_item.ident.to_string();
+                // Store the original type for later resolution
+                self.type_aliases.insert(type_name, *type_item.ty.clone());
+            }
+        }
+    }
+
     fn parse_type(&self, ty: &Type) -> TypeKind {
+        debug!("Parsing type: {}", ty.to_token_stream());
+
         match ty {
             Type::Path(TypePath { path, .. }) => {
                 if let Some(segment) = path.segments.last() {
                     let type_name = segment.ident.to_string();
+
+                    // Debug: Print when we're checking for an alias
+                    debug!("  Checking for alias: {}", type_name);
+
+                    // Try to resolve type alias before other type matching
+                    if let Some(aliased_type) = self.type_aliases.get(&type_name) {
+                        debug!(
+                            "  Found alias! Resolving to: {:?}",
+                            aliased_type.to_token_stream()
+                        );
+                        return self.parse_type(aliased_type);
+                    }
 
                     match type_name.as_str() {
                         // Primitive types
@@ -119,15 +155,36 @@ impl TypeParser {
                             panic!("Invalid Option type")
                         }
                         _ => {
-                            // Check if it's a known struct or enum
-                            let full_path = format!("{}::{}", self.module_path, type_name);
+                            // If path has multiple segments, it's a cross-module reference
+                            let module_path = if path.segments.len() > 1 {
+                                let mut segments: Vec<_> = path
+                                    .segments
+                                    .iter()
+                                    .take(path.segments.len() - 1)
+                                    .map(|s| s.ident.to_string())
+                                    .collect();
+                                // Handle super:: by using the module directly
+                                if segments[0] == "super" {
+                                    segments.remove(0);
+                                }
+                                segments.join("::")
+                            } else {
+                                self.module_path.clone()
+                            };
+
+                            let full_path = if module_path.is_empty() {
+                                type_name.clone()
+                            } else {
+                                format!("{}::{}", module_path, type_name)
+                            };
+
                             if self.structs.contains_key(&full_path) {
                                 TypeKind::Struct(type_name.clone(), full_path)
                             } else if self.enums.contains_key(&full_path) {
                                 TypeKind::Enum(type_name.clone(), full_path)
                             } else {
-                                // Assume it's a struct/enum from another module
-                                TypeKind::Struct(type_name.clone(), type_name)
+                                // Even for unknown types, use the full module path
+                                TypeKind::Struct(type_name.clone(), full_path)
                             }
                         }
                     }

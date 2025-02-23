@@ -1,5 +1,6 @@
 use super::type_parser::{EnumInfo, StructInfo, TypeKind};
 use anyhow::{anyhow, Result};
+use log::debug;
 use petgraph::algo::toposort;
 use petgraph::prelude::*;
 use std::collections::{HashMap, HashSet};
@@ -92,9 +93,12 @@ impl DependencyResolver {
     fn get_type_dependencies(&self, type_path: &str) -> Option<HashSet<String>> {
         let mut deps = HashSet::new();
 
+        debug!("Getting dependencies for type: {}", type_path);
+
         // Check structs
         if let Some(struct_info) = self.structs.get(type_path) {
             for field in &struct_info.fields {
+                debug!("  Field type: {:?}", field.type_kind);
                 self.collect_type_dependencies(&field.type_kind, &mut deps);
             }
             return Some(deps);
@@ -105,6 +109,7 @@ impl DependencyResolver {
             for variant in &enum_info.variants {
                 if let Some(fields) = &variant.fields {
                     for field in fields {
+                        debug!("  Variant field type: {:?}", field.type_kind);
                         self.collect_type_dependencies(&field.type_kind, &mut deps);
                     }
                 }
@@ -118,7 +123,8 @@ impl DependencyResolver {
     #[allow(clippy::only_used_in_recursion)] // Parameter is essential for recursive calls
     fn collect_type_dependencies(&self, type_kind: &TypeKind, deps: &mut HashSet<String>) {
         match type_kind {
-            TypeKind::Struct(_, path) | TypeKind::Enum(_, path) => {
+            TypeKind::Struct(name, path) | TypeKind::Enum(name, path) => {
+                debug!("  Adding dependency: {} ({})", name, path);
                 deps.insert(path.clone());
             }
             TypeKind::Vec(inner) | TypeKind::Option(inner) | TypeKind::Array(inner, _) => {

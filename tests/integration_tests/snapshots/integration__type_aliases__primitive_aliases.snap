@@ -1,0 +1,12 @@
+---
+source: tests/integration_tests/type_aliases.rs
+expression: output
+snapshot_kind: text
+---
+import { b } from '@zorsh/zorsh';
+
+export const DataSchema = b.struct({
+    value: b.u64(),
+    count: b.u32()
+});
+export type Data = b.infer<typeof DataSchema>;

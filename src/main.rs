@@ -23,11 +23,12 @@ struct Args {
     only_annotated: bool,
 
     /// Ignore files and directories matching these comma-separated patterns (e.g., "tests/,examples/,target/")
-    #[arg(long, value_delimiter = ',', default_value = "tests/,target/")]
+    #[arg(long, value_delimiter = ',')]
     ignored_patterns: Vec<String>,
 }
 
 fn main() -> Result<()> {
+    env_logger::init();
     let args = Args::parse();
 
     let config = Config {

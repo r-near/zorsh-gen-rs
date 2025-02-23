@@ -2,6 +2,7 @@ mod basic_types;
 mod complex_types;
 mod config_tests;
 mod module_structure;
+mod type_aliases;
 
 // Shared test utilities
 use std::fs;
@@ -10,6 +11,7 @@ use zorsh_gen_rs::{Config, ZorshGen};
 
 // Helper to setup temporary test directories
 pub(crate) fn setup_test_dir() -> TempDir {
+    env_logger::try_init().ok();
     tempfile::Builder::new()
         .prefix("zorsh_test_") // Use zorsh_test_ instead of .tmp
         .tempdir()
