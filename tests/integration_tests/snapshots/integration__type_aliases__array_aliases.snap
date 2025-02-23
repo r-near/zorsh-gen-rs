@@ -1,0 +1,12 @@
+---
+source: tests/integration_tests/type_aliases.rs
+expression: output
+snapshot_kind: text
+---
+import { b } from '@zorsh/zorsh';
+
+export const CryptoSchema = b.struct({
+    hash: b.array(b.u8(), 32),
+    address: b.array(b.u8(), 20)
+});
+export type Crypto = b.infer<typeof CryptoSchema>;

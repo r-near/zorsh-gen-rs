@@ -1,0 +1,14 @@
+---
+source: tests/integration_tests/type_aliases.rs
+expression: output
+snapshot_kind: text
+---
+import { b } from '@zorsh/zorsh';
+
+export const TransactionSchema = b.struct({
+    sender: b.array(b.u8(), 32),
+    receiver: b.array(b.u8(), 32),
+    amount: b.u64(),
+    data: b.vec(b.u8())
+});
+export type Transaction = b.infer<typeof TransactionSchema>;

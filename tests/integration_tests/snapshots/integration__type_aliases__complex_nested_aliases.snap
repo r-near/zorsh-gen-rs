@@ -1,0 +1,13 @@
+---
+source: tests/integration_tests/type_aliases.rs
+expression: output
+snapshot_kind: text
+---
+import { b } from '@zorsh/zorsh';
+
+export const StateSchema = b.struct({
+    accounts: b.vec(b.array(b.u8(), 32)),
+    balances: b.hashMap(b.array(b.u8(), 32), b.u64()),
+    metadata: b.hashMap(b.string(), b.vec(b.u8()))
+});
+export type State = b.infer<typeof StateSchema>;

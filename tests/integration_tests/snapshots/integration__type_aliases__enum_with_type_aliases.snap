@@ -1,0 +1,19 @@
+---
+source: tests/integration_tests/type_aliases.rs
+expression: output
+snapshot_kind: text
+---
+import { b } from '@zorsh/zorsh';
+
+export const EventSchema = b.enum({
+    Transfer: b.struct({
+        from: b.array(b.u8(), 32),
+        to: b.array(b.u8(), 32),
+        amount: b.u64()
+    }),
+    Mint: b.struct({
+        to: b.array(b.u8(), 32),
+        token_id: b.u32()
+    })
+});
+export type Event = b.infer<typeof EventSchema>;
