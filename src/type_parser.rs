@@ -137,8 +137,29 @@ impl TypeParser {
                             panic!("Invalid Option type")
                         }
                         _ => {
-                            // Check if it's a known struct or enum
-                            let full_path = format!("{}::{}", self.module_path, type_name);
+                            // If path has multiple segments, it's a cross-module reference
+                            let module_path = if path.segments.len() > 1 {
+                                let mut segments: Vec<_> = path
+                                    .segments
+                                    .iter()
+                                    .take(path.segments.len() - 1)
+                                    .map(|s| s.ident.to_string())
+                                    .collect();
+                                // Handle super:: by using the module directly
+                                if segments[0] == "super" {
+                                    segments.remove(0);
+                                }
+                                segments.join("::")
+                            } else {
+                                self.module_path.clone()
+                            };
+
+                            let full_path = if module_path.is_empty() {
+                                type_name.clone()
+                            } else {
+                                format!("{}::{}", module_path, type_name)
+                            };
+
                             if self.structs.contains_key(&full_path) {
                                 TypeKind::Struct(type_name.clone(), full_path)
                             } else if self.enums.contains_key(&full_path) {
