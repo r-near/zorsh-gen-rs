@@ -94,10 +94,10 @@ cargo install --path .
 
 ```bash
 # Unix-like systems (Linux, macOS)
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/r-near/zorsh-gen-rs/releases/download/v0.1.3/zorsh-gen-rs-installer.sh | sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/r-near/zorsh-gen-rs/releases/latest/download/zorsh-gen-rs-installer.sh | sh
 
 # Windows PowerShell
-powershell -ExecutionPolicy Bypass -c "irm https://github.com/r-near/zorsh-gen-rs/releases/download/v0.1.3/zorsh-gen-rs-installer.ps1 | iex"
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/r-near/zorsh-gen-rs/releases/latest/download/zorsh-gen-rs-installer.ps1 | iex"
 ```
 
 ### Package Managers
