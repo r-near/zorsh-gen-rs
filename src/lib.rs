@@ -55,6 +55,7 @@ pub struct ZorshGen {
 
 impl ZorshGen {
     pub fn new(config: Config) -> Self {
+        env_logger::init();
         Self { config }
     }
 
