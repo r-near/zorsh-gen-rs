@@ -1,4 +1,6 @@
 use anyhow::Result;
+use log::debug;
+use quote::ToTokens;
 use std::collections::HashMap;
 use syn::{
     visit::{self, Visit},
@@ -48,6 +50,7 @@ pub struct TypeParser {
     only_annotated: bool,
     pub structs: HashMap<String, StructInfo>,
     pub enums: HashMap<String, EnumInfo>,
+    type_aliases: HashMap<String, Type>,
 }
 
 impl TypeParser {
@@ -57,6 +60,7 @@ impl TypeParser {
             only_annotated,
             structs: HashMap::new(),
             enums: HashMap::new(),
+            type_aliases: HashMap::new(),
         }
     }
 
@@ -71,10 +75,24 @@ impl TypeParser {
     }
 
     fn parse_type(&self, ty: &Type) -> TypeKind {
+        debug!("Parsing type: {}", ty.to_token_stream());
+
         match ty {
             Type::Path(TypePath { path, .. }) => {
                 if let Some(segment) = path.segments.last() {
                     let type_name = segment.ident.to_string();
+
+                    // Debug: Print when we're checking for an alias
+                    debug!("  Checking for alias: {}", type_name);
+
+                    // Try to resolve type alias before other type matching
+                    if let Some(aliased_type) = self.type_aliases.get(&type_name) {
+                        debug!(
+                            "  Found alias! Resolving to: {:?}",
+                            aliased_type.to_token_stream()
+                        );
+                        return self.parse_type(aliased_type);
+                    }
 
                     match type_name.as_str() {
                         // Primitive types
@@ -126,8 +144,8 @@ impl TypeParser {
                             } else if self.enums.contains_key(&full_path) {
                                 TypeKind::Enum(type_name.clone(), full_path)
                             } else {
-                                // Assume it's a struct/enum from another module
-                                TypeKind::Struct(type_name.clone(), type_name)
+                                // Even for unknown types, use the full module path
+                                TypeKind::Struct(type_name.clone(), full_path)
                             }
                         }
                     }
@@ -155,6 +173,17 @@ impl TypeParser {
 }
 
 impl<'ast> Visit<'ast> for TypeParser {
+    fn visit_item(&mut self, item: &'ast syn::Item) {
+        match item {
+            syn::Item::Type(type_item) => {
+                let type_name = type_item.ident.to_string();
+                // Store the original type for later resolution
+                self.type_aliases.insert(type_name, *type_item.ty.clone());
+            }
+            _ => visit::visit_item(self, item),
+        }
+    }
+
     fn visit_item_struct(&mut self, node: &'ast ItemStruct) {
         // Only process if it matches our annotation requirements
         if !self.should_process_item(&node.attrs) {
