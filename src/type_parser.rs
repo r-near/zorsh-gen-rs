@@ -1,5 +1,5 @@
 use anyhow::Result;
-use log::debug;
+use log::{debug, info};
 use quote::ToTokens;
 use std::collections::HashMap;
 use syn::{
@@ -69,12 +69,15 @@ impl TypeParser {
     }
 
     pub fn parse_file(&mut self, content: &str) -> Result<()> {
+        info!("🔍 Parsing types in module: {}", self.module_path);
         let syntax: File = syn::parse_str(content)?;
 
         // First pass: collect all type aliases
+        info!("📝 Collecting type aliases...");
         self.collect_type_aliases(&syntax);
 
         // Second pass: process structs and enums
+        info!("🏗️ Processing structs and enums...");
         self.visit_file(&syntax);
 
         Ok(())
@@ -215,19 +218,23 @@ impl<'ast> Visit<'ast> for TypeParser {
     fn visit_item_struct(&mut self, node: &'ast ItemStruct) {
         // Only process if it matches our annotation requirements
         if !self.should_process_item(&node.attrs) {
+            debug!("Skipping non-annotated struct: {}", node.ident);
             return;
         }
 
         let struct_name = node.ident.to_string();
         let full_path = format!("{}::{}", self.module_path, struct_name);
+        info!("📦 Processing struct: {}", full_path);
         let mut fields = Vec::new();
 
         if let Fields::Named(named_fields) = &node.fields {
             for field in &named_fields.named {
                 if let Some(ident) = &field.ident {
+                    let field_type = self.parse_type(&field.ty);
+                    debug!("  Field: {} -> {:?}", ident, field_type);
                     fields.push(FieldInfo {
                         name: ident.to_string(),
-                        type_kind: self.parse_type(&field.ty),
+                        type_kind: field_type,
                     });
                 }
             }
@@ -241,6 +248,7 @@ impl<'ast> Visit<'ast> for TypeParser {
                 fields,
             },
         );
+        info!("✅ Completed struct: {}", full_path);
 
         visit::visit_item_struct(self, node);
     }
@@ -248,37 +256,65 @@ impl<'ast> Visit<'ast> for TypeParser {
     fn visit_item_enum(&mut self, node: &'ast ItemEnum) {
         // Only process if it matches our annotation requirements
         if !self.should_process_item(&node.attrs) {
+            debug!("Skipping non-annotated enum: {}", node.ident);
             return;
         }
 
         let enum_name = node.ident.to_string();
         let full_path = format!("{}::{}", self.module_path, enum_name);
+        info!("🔄 Processing enum: {}", full_path);
         let mut variants = Vec::new();
 
         for variant in &node.variants {
             let variant_name = variant.ident.to_string();
+            debug!("  Variant: {}", variant_name);
+
             let fields = match &variant.fields {
-                Fields::Named(named_fields) => Some(
-                    named_fields
-                        .named
-                        .iter()
-                        .map(|field| FieldInfo {
-                            name: field.ident.as_ref().unwrap().to_string(),
-                            type_kind: self.parse_type(&field.ty),
-                        })
-                        .collect(),
-                ),
-                Fields::Unnamed(unnamed_fields) => Some(
-                    unnamed_fields
-                        .unnamed
-                        .iter()
-                        .map(|field| FieldInfo {
-                            name: String::new(),
-                            type_kind: self.parse_type(&field.ty),
-                        })
-                        .collect(),
-                ),
-                Fields::Unit => None,
+                Fields::Named(named_fields) => {
+                    info!("    Struct variant with named fields");
+                    Some(
+                        named_fields
+                            .named
+                            .iter()
+                            .map(|field| {
+                                let field_type = self.parse_type(&field.ty);
+                                debug!(
+                                    "      Field: {} -> {:?}",
+                                    field.ident.as_ref().unwrap(),
+                                    field_type
+                                );
+                                FieldInfo {
+                                    name: field.ident.as_ref().unwrap().to_string(),
+                                    type_kind: field_type,
+                                }
+                            })
+                            .collect(),
+                    )
+                }
+                Fields::Unnamed(unnamed_fields) => {
+                    info!(
+                        "    Tuple variant with {} fields",
+                        unnamed_fields.unnamed.len()
+                    );
+                    Some(
+                        unnamed_fields
+                            .unnamed
+                            .iter()
+                            .map(|field| {
+                                let field_type = self.parse_type(&field.ty);
+                                debug!("      Field type: {:?}", field_type);
+                                FieldInfo {
+                                    name: String::new(),
+                                    type_kind: field_type,
+                                }
+                            })
+                            .collect(),
+                    )
+                }
+                Fields::Unit => {
+                    debug!("    Unit variant");
+                    None
+                }
             };
 
             variants.push(EnumVariant {
@@ -295,6 +331,7 @@ impl<'ast> Visit<'ast> for TypeParser {
                 variants,
             },
         );
+        info!("✅ Completed enum: {}", full_path);
 
         visit::visit_item_enum(self, node);
     }

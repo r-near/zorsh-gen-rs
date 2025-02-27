@@ -15,6 +15,7 @@ path = "tests/integration_tests/mod.rs"
 [dependencies]
 anyhow = "1.0.96"
 clap = { version = "4.5.30", features = ["derive"] }
+colored = "2.0"
 env_logger = "0.11.6"
 log = "0.4.26"
 petgraph = "0.7.1"
