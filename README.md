@@ -27,6 +27,7 @@ pnpm dlx @zorsh/cli ./src/models ./generated
 ```
 
 Your Rust types:
+
 ```rust
 use borsh::{BorshDeserialize, BorshSerialize};
 
@@ -39,13 +40,14 @@ pub struct Player {
 ```
 
 Automatically become Zorsh schemas:
+
 ```typescript
-import { b } from '@zorsh/zorsh';
+import { b } from "@zorsh/zorsh";
 
 export const PlayerSchema = b.struct({
-    name: b.string(),
-    score: b.u32(),
-    inventory: b.hashMap(b.string(), b.vec(ItemSchema))
+  name: b.string(),
+  score: b.u32(),
+  inventory: b.hashMap(b.string(), b.vec(ItemSchema)),
 });
 ```
 
@@ -127,7 +129,19 @@ zorsh-gen-rs <input-dir> <output-dir>
 
 # With options
 zorsh-gen-rs --flat-output --only-annotated ./src/models ./generated
+
+# Debug output
+zorsh-gen-rs --verbose ./src/models ./generated  # Show detailed debug information
+zorsh-gen-rs --quiet ./src/models ./generated    # Show only errors
 ```
+
+Options:
+
+- `--verbose, -v`: Show detailed debug information during conversion
+- `--quiet, -q`: Show only errors (overrides --verbose)
+- `--flat-output`: Output all files in a flat directory structure
+- `--only-annotated`: Only process structs with Borsh derive macros (default: true)
+- `--ignored-patterns`: Comma-separated patterns to ignore (e.g., "tests/,examples/")
 
 ### As a Library
 
@@ -182,10 +196,10 @@ generated/
 let config = Config {
     // Only process structs with #[derive(BorshSerialize)]
     only_annotated: true,
-    
+
     // Skip certain paths
     ignored_patterns: vec!["tests/", "examples/"],
-    
+
     // Output structure (nested or flat)
     output_structure: OutputStructure::Nested,
 };
@@ -200,7 +214,6 @@ Contributions are welcome! Before you start:
   - Report bugs
   - Suggest features
   - Submit pull requests
-
 
 ## Related Projects
 
